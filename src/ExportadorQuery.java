@@ -22,9 +22,13 @@ import com.opencsv.*;
 
 public class ExportadorQuery {
 	private String _fileOutput, _query, _driver, _url, _user, _pass, _CONFIG = "Configuracion.config";
-	private enum EXTENSION {ZIP, CSV, XLSX, NONE};
+
+	private enum EXTENSION {
+		ZIP, CSV, XLSX, NONE
+	};
+
 	private EXTENSION _EXTENSION, _COMPRESION;
-	
+
 	public ExportadorQuery(String configFile) {
 		_CONFIG = configFile;
 	}
@@ -34,16 +38,21 @@ public class ExportadorQuery {
 		LeerParametros();
 		System.out.println("Lanzando query...");
 		ResultSet rs = ObtenerResulsetQuery();
-		
-		
-		System.out.println("Escribiendo fichero...");
-		if(_EXTENSION==EXTENSION.CSV)
+
+		System.out.println("Extension "+_EXTENSION.toString());
+		if (_EXTENSION == EXTENSION.CSV){
+			System.out.println("Escribiendo fichero...");
 			EscribirCSV(rs);
-		else if (_EXTENSION==EXTENSION.XLSX)
+		}
+		else if (_EXTENSION == EXTENSION.XLSX){
+			System.out.println("Escribiendo fichero...");
 			EscribirXLSX(rs);
+		}
+		System.out.println("Finalizada generacion.");
 		
-		
-		if (_COMPRESION==EXTENSION.ZIP) {
+
+		System.out.println("Compresion "+_COMPRESION.toString());
+		if (_COMPRESION == EXTENSION.ZIP) {
 			System.out.println("Comprimiendo fichero...");
 			Comprimir();
 			System.out.println("Borrando fichero origen...");
@@ -95,22 +104,26 @@ public class ExportadorQuery {
 			_user = lines.get(2);
 			_pass = lines.get(3);
 			_fileOutput = lines.get(4);
-			if (_fileOutput.substring(_fileOutput.lastIndexOf(".")+1,_fileOutput.length()).toUpperCase().trim().equals("CSV"))
-				_EXTENSION=EXTENSION.CSV;
-			else if (_fileOutput.substring(_fileOutput.lastIndexOf(".")+1,_fileOutput.length()).toUpperCase().trim().equals("XLSX"))
-				_EXTENSION=EXTENSION.XLSX;
-			else
-				_EXTENSION=EXTENSION.NONE;
-			System.out.println("Extension "+_EXTENSION);
-			
+			try {
+				if (_fileOutput.substring(_fileOutput.lastIndexOf(".") + 1, _fileOutput.length()).toUpperCase().trim()
+						.equals("CSV"))
+					_EXTENSION = EXTENSION.CSV;
+				else if (_fileOutput.substring(_fileOutput.lastIndexOf(".") + 1, _fileOutput.length()).toUpperCase()
+						.trim().equals("XLSX"))
+					_EXTENSION = EXTENSION.XLSX;
+				else
+					_EXTENSION = EXTENSION.NONE;
+			} catch (Exception e) {
+				_EXTENSION = EXTENSION.NONE;
+			}
+
 			_query = lines.get(5);
-			
-			if(lines.get(6).toUpperCase().trim().equals("ZIP"))
+
+			if (lines.get(6).toUpperCase().trim().equals("ZIP"))
 				_COMPRESION = EXTENSION.ZIP;
 			else
-				_COMPRESION=EXTENSION.NONE;
-			System.out.println("Compresion "+_COMPRESION);
-			
+				_COMPRESION = EXTENSION.NONE;
+
 		} catch (IOException e) {
 			throw new Exception(
 					"Error al leer el archivo de parametros " + _CONFIG + "\n\tDetalles: " + e.getMessage());
@@ -132,7 +145,7 @@ public class ExportadorQuery {
 	}
 
 	private void EscribirXLSX(ResultSet rs) throws Exception {
-		//TODO Fala ver si el close del wb afecta en algo.
+		// TODO Fala ver si el close del wb afecta en algo.
 		try {
 
 			SXSSFWorkbook wb = new SXSSFWorkbook();
@@ -141,28 +154,27 @@ public class ExportadorQuery {
 			SXSSFSheet sh = (SXSSFSheet) wb.createSheet("Hoja1");
 			// keep 100 rows in memory, exceeding rows will be flushed to disk
 			sh.setRandomAccessWindowSize(100);
-			int totalColumnas=rs.getMetaData().getColumnCount();
-			
-			//Cabecera
-			Row heading = sh.createRow(1);
-            ResultSetMetaData rsmd = rs.getMetaData();
-            for(int x = 0; x < totalColumnas; x++) {
-                Cell cell = heading.createCell(x+1);
-                cell.setCellValue(rsmd.getColumnLabel(x+1));
-            }
-			
-			
-            //Datos
-            int rowNumber = 2;
+			int totalColumnas = rs.getMetaData().getColumnCount();
 
-            while(rs.next()) {
-            	Row row = sh.createRow(rowNumber);
-            	for (int y = 0; y < totalColumnas; y++) {
-					Cell cell = row.createCell(y+1);
-					cell.setCellValue(rs.getString(y+1));            		
-            	}
-            	rowNumber++;
-            }
+			// Cabecera
+			Row heading = sh.createRow(1);
+			ResultSetMetaData rsmd = rs.getMetaData();
+			for (int x = 0; x < totalColumnas; x++) {
+				Cell cell = heading.createCell(x + 1);
+				cell.setCellValue(rsmd.getColumnLabel(x + 1));
+			}
+
+			// Datos
+			int rowNumber = 2;
+
+			while (rs.next()) {
+				Row row = sh.createRow(rowNumber);
+				for (int y = 0; y < totalColumnas; y++) {
+					Cell cell = row.createCell(y + 1);
+					cell.setCellValue(rs.getString(y + 1));
+				}
+				rowNumber++;
+			}
 
 			FileOutputStream out = new FileOutputStream(_fileOutput);
 			wb.write(out);
