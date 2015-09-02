@@ -9,6 +9,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -37,21 +38,19 @@ public class ExportadorQuery {
 		System.out.println("Leyendo parametros...");
 		LeerParametros();
 		System.out.println("Lanzando query...");
-		ResultSet rs = ObtenerResulsetQuery();
+		List<String[]> resultList = ObtenerResulsetQuery();
 
-		System.out.println("Extension "+_EXTENSION.toString());
-		if (_EXTENSION == EXTENSION.CSV){
+		System.out.println("Extension " + _EXTENSION.toString());
+		if (_EXTENSION == EXTENSION.CSV) {
 			System.out.println("Escribiendo fichero...");
-			EscribirCSV(rs);
-		}
-		else if (_EXTENSION == EXTENSION.XLSX){
+			EscribirCSV(resultList);
+		} else if (_EXTENSION == EXTENSION.XLSX) {
 			System.out.println("Escribiendo fichero...");
-			EscribirXLSX(rs);
+			EscribirXLSX(resultList);
 		}
 		System.out.println("Finalizada generacion.");
-		
 
-		System.out.println("Compresion "+_COMPRESION.toString());
+		System.out.println("Compresion " + _COMPRESION.toString());
 		if (_COMPRESION == EXTENSION.ZIP) {
 			System.out.println("Comprimiendo fichero...");
 			Comprimir();
@@ -130,66 +129,53 @@ public class ExportadorQuery {
 		}
 	}
 
-	private void EscribirCSV(ResultSet rs) throws Exception {
+	private void EscribirCSV(List<String[]> resultList) throws Exception {
 		CSVWriter wr;
 		try {
 			wr = new CSVWriter(new FileWriter(_fileOutput), ';', CSVWriter.NO_QUOTE_CHARACTER);
-			wr.writeAll(rs, true);
+			wr.writeAll(resultList, true);
 			wr.flush();
 			wr.close();
 
-			rs.close();
-		} catch (IOException | SQLException e) {
+			resultList.clear();
+		} catch (IOException e) {
 			throw new Exception("Error al generar CSV " + _fileOutput + "\n\tDetalles: " + e.getMessage());
 		}
 	}
 
-	private void EscribirXLSX(ResultSet rs) throws Exception {
-		// TODO Fala ver si el close del wb afecta en algo.
-		try {
+	private void EscribirXLSX(List<String[]> resultList) throws Exception {
+		SXSSFWorkbook wb = new SXSSFWorkbook();
+		wb.setCompressTempFiles(true);
 
-			SXSSFWorkbook wb = new SXSSFWorkbook();
-			wb.setCompressTempFiles(true);
+		SXSSFSheet sh = (SXSSFSheet) wb.createSheet("Hoja1");
+		// keep 100 rows in memory, exceeding rows will be flushed to disk
+		sh.setRandomAccessWindowSize(100);
+		int totalColumnas = resultList.get(0).length;
+		int totalFilas = resultList.size();
 
-			SXSSFSheet sh = (SXSSFSheet) wb.createSheet("Hoja1");
-			// keep 100 rows in memory, exceeding rows will be flushed to disk
-			sh.setRandomAccessWindowSize(100);
-			int totalColumnas = rs.getMetaData().getColumnCount();
-
-			// Cabecera
-			Row heading = sh.createRow(1);
-			ResultSetMetaData rsmd = rs.getMetaData();
-			for (int x = 0; x < totalColumnas; x++) {
-				Cell cell = heading.createCell(x + 1);
-				cell.setCellValue(rsmd.getColumnLabel(x + 1));
+		// Datos
+		for (int x = 0; x < totalFilas; x++) {
+			Row row = sh.createRow(x + 1);
+			for (int y = 0; y < totalColumnas; y++) {
+				Cell cell = row.createCell(y + 1);
+				cell.setCellValue(resultList.get(x)[y].toString());
 			}
-
-			// Datos
-			int rowNumber = 2;
-
-			while (rs.next()) {
-				Row row = sh.createRow(rowNumber);
-				for (int y = 0; y < totalColumnas; y++) {
-					Cell cell = row.createCell(y + 1);
-					cell.setCellValue(rs.getString(y + 1));
-				}
-				rowNumber++;
-			}
-
-			FileOutputStream out = new FileOutputStream(_fileOutput);
-			wb.write(out);
-			out.close();
-
-			rs.close();
-		} catch (SQLException e) {
-			throw new Exception("Error al generar XLSX " + _fileOutput + "\n\tDetalles: " + e.getMessage());
 		}
+
+		FileOutputStream out = new FileOutputStream(_fileOutput);
+		wb.write(out);
+		out.close();
+		resultList.clear();
+		wb.close();
 	}
 
-	private ResultSet ObtenerResulsetQuery() throws Exception {
-		Statement stmt;
-		Connection conn;
+	private List<String[]> ObtenerResulsetQuery() throws Exception {
+		Statement stmt = null;
+		Connection conn = null;
+		ResultSet rs = null;
 		String log = "";
+		List<String[]> resultList = new ArrayList<String[]>();
+
 		try {
 			log = log + "[Paso 1 de 3]Buscando driver " + _driver + "...\n";
 			Class.forName(_driver);
@@ -199,17 +185,39 @@ public class ExportadorQuery {
 			log = log + "Conexion " + _url + " realizada.\n";
 			stmt = conn.createStatement();
 			log = log + "[Paso 3 de 3]Lanzando query...\n";
-			ResultSet rs = stmt.executeQuery(_query);
+			rs = stmt.executeQuery(_query);
 			log = log + "Query obtenida.\n";
 
-			stmt.close();
-			conn.close();
-			return rs;
+			List<String> row = null;
+
+			ResultSetMetaData metaData = rs.getMetaData();
+			Integer columnCount = metaData.getColumnCount();
+
+			// cabecera
+			row = new ArrayList<String>();
+			for (int i = 1; i <= columnCount; i++)
+				row.add(metaData.getColumnName(i).toString());
+
+			// datos
+			while (rs.next()) {
+				row = new ArrayList<String>();
+				for (int i = 1; i <= columnCount; i++)
+					row.add(rs.getObject(i).toString());
+				resultList.add((String[]) row.toArray());
+			}
 		} catch (SQLException | ClassNotFoundException e) {
 			log = log + "ERROR!!!";
 			throw new Exception("Error leer de la base de datos " + _fileOutput + "\n\tLog:\n" + log + "\n\tDetalles: "
 					+ e.getMessage());
+		} finally {
+			if (rs != null)
+				rs.close();
+			if (stmt != null)
+				stmt.close();
+			if (conn != null)
+				conn.close();
 		}
+		return resultList;
 	}
 
 }
