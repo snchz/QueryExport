@@ -203,7 +203,7 @@ public class ExportadorQuery {
 				row = new ArrayList<String>();
 				for (int i = 1; i <= columnCount; i++)
 					row.add(rs.getObject(i).toString());
-				resultList.add((String[]) row.toArray());
+				resultList.add(row.toArray(new String[row.size()]));
 			}
 		} catch (SQLException | ClassNotFoundException e) {
 			log = log + "ERROR!!!";
