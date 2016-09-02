@@ -30,25 +30,31 @@ public class ExportadorQuery {
 
 	private EXTENSION _EXTENSION, _COMPRESION;
 
+	/**
+	 * 
+	 * @param configFile Fichero de Configuración
+	 */
 	public ExportadorQuery(String configFile) {
 		_CONFIG = configFile;
 	}
 
+	/**
+	 * Metodo principal. Lee el archivo de configuración y ejecuta la query solicitada.
+	 * @throws Exception
+	 */
 	public void Ejecutar() throws Exception {
 		System.out.println("Leyendo parametros...");
 		LeerParametros();
 		System.out.println("Lanzando query...");
 		List<String[]> resultList = ObtenerResulsetQuery();
 
-		System.out.println("Extension " + _EXTENSION.toString());
+		System.out.println("Escribiendo fichero (extension " + _EXTENSION.toString() + " )...");
 		if (_EXTENSION == EXTENSION.CSV) {
-			System.out.println("Escribiendo fichero...");
 			EscribirCSV(resultList);
 		} else if (_EXTENSION == EXTENSION.XLSX) {
-			System.out.println("Escribiendo fichero...");
 			EscribirXLSX(resultList);
 		}
-		System.out.println("Finalizada generacion.");
+		System.out.println("Finalizada la generacion del fichero.");
 
 		System.out.println("Compresion " + _COMPRESION.toString());
 		if (_COMPRESION == EXTENSION.ZIP) {
@@ -59,6 +65,10 @@ public class ExportadorQuery {
 		}
 	}
 
+	/**
+	 * Borra fichero original para dejar solo el comprimido.
+	 * @throws Exception
+	 */
 	private void BorrarFicheroSinComprimir() throws Exception {
 		try {
 			File fichero = new File(_fileOutput);
@@ -68,6 +78,10 @@ public class ExportadorQuery {
 		}
 	}
 
+	/**
+	 * Comprimir el fichero resutante.
+	 * @throws Exception
+	 */
 	private void Comprimir() throws Exception {
 		try {
 			// input file
@@ -85,7 +99,6 @@ public class ExportadorQuery {
 			int count;
 
 			while ((count = in.read(b)) > 0) {
-				System.out.println();
 				out.write(b, 0, count);
 			}
 			out.close();
@@ -95,6 +108,17 @@ public class ExportadorQuery {
 		}
 	}
 
+	/**
+	 * Lee los parámetros del fichero de configuración.
+	 * Linea 1. Driver de base de datos. Por ejemplo: oracle.jdbc.driver.OracleDriver
+	 * Linea 2. Url de conexion a la base de datos. Por ejemplo: jdbc:oracle:thin:@localhost:1521:mkyong
+	 * Linea 3. Usuario de conexion a la base de datos.
+	 * Linea 4. Password de conexion a la base de datos.
+	 * Linea 5. Nombre del fichero de salida de la consulta.
+	 * Linea 6. Query a ejecutar.
+	 * Linea 7. Si es ZIP, el archivo destino se comprime. En otro caso se deja sin comprimir
+	 * @throws Exception
+	 */
 	private void LeerParametros() throws Exception {
 		try {
 			List<String> lines = FileUtils.readLines(new File(_CONFIG));
@@ -129,6 +153,11 @@ public class ExportadorQuery {
 		}
 	}
 
+	/**
+	 * Guarda el resultado de la query como CSV separado por punto y coma.
+	 * @param resultList Lista que se va a guardar en fichero CSV
+	 * @throws Exception
+	 */
 	private void EscribirCSV(List<String[]> resultList) throws Exception {
 		CSVWriter wr;
 		try {
@@ -143,6 +172,11 @@ public class ExportadorQuery {
 		}
 	}
 
+	/**
+	 * Guarda el resultado de la query como XLSX.
+	 * @param resultList Lista que se va a guardar en fichero XLSX
+	 * @throws Exception
+	 */
 	private void EscribirXLSX(List<String[]> resultList) throws Exception {
 		SXSSFWorkbook wb = new SXSSFWorkbook();
 		wb.setCompressTempFiles(true);
@@ -155,9 +189,9 @@ public class ExportadorQuery {
 
 		// Datos
 		for (int x = 0; x < totalFilas; x++) {
-			Row row = sh.createRow(x + 1);
+			Row row = sh.createRow(x);
 			for (int y = 0; y < totalColumnas; y++) {
-				Cell cell = row.createCell(y + 1);
+				Cell cell = row.createCell(y);
 				cell.setCellValue(resultList.get(x)[y].toString());
 			}
 		}
@@ -169,25 +203,30 @@ public class ExportadorQuery {
 		wb.close();
 	}
 
+	/**
+	 * Ejecuta la query y la devuelve en una lista.
+	 * @return Lista de Arrays con el resultado de la query. Cada array es una fila.
+	 * @throws Exception
+	 */
 	private List<String[]> ObtenerResulsetQuery() throws Exception {
 		Statement stmt = null;
 		Connection conn = null;
 		ResultSet rs = null;
-		String log = "";
 		List<String[]> resultList = new ArrayList<String[]>();
 
 		try {
-			log = log + "[Paso 1 de 3]Buscando driver " + _driver + "...\n";
+			System.out.println("[Paso 1 de 3] Buscando driver " + _driver + "...");
 			Class.forName(_driver);
-			log = log + "Driver " + _driver + " encontrado.\n";
-			log = log + "[Paso 2 de 3]Realizando conexion " + _url + "...\n";
+			System.out.println("Driver " + _driver + " encontrado.");
+			System.out.println("[Paso 2 de 3] Realizando conexion " + _url + "...");
 			conn = DriverManager.getConnection(_url, _user, _pass);
-			log = log + "Conexion " + _url + " realizada.\n";
+			System.out.println("Conexion " + _url + " realizada.");
 			stmt = conn.createStatement();
-			log = log + "[Paso 3 de 3]Lanzando query...\n";
+			System.out.println("[Paso 3 de 3] Lanzando query...");
 			rs = stmt.executeQuery(_query);
-			log = log + "Query obtenida.\n";
-
+			System.out.println("Query obtenida.");
+			System.out.println("Almacenando en la RAM...");
+			
 			List<String> row = null;
 
 			ResultSetMetaData metaData = rs.getMetaData();
@@ -197,7 +236,8 @@ public class ExportadorQuery {
 			row = new ArrayList<String>();
 			for (int i = 1; i <= columnCount; i++)
 				row.add(metaData.getColumnName(i).toString());
-
+			resultList.add(row.toArray(new String[row.size()]));
+			
 			// datos
 			while (rs.next()) {
 				row = new ArrayList<String>();
@@ -206,8 +246,7 @@ public class ExportadorQuery {
 				resultList.add(row.toArray(new String[row.size()]));
 			}
 		} catch (SQLException | ClassNotFoundException e) {
-			log = log + "ERROR!!!";
-			throw new Exception("Error leer de la base de datos " + _fileOutput + "\n\tLog:\n" + log + "\n\tDetalles: "
+			throw new Exception("Error leer de la base de datos " + _fileOutput + "\n\tDetalles: "
 					+ e.getMessage());
 		} finally {
 			if (rs != null)
