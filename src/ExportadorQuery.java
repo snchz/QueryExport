@@ -7,7 +7,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
@@ -245,7 +244,7 @@ public class ExportadorQuery {
 					row.add(rs.getObject(i).toString());
 				resultList.add(row.toArray(new String[row.size()]));
 			}
-		} catch (SQLException | ClassNotFoundException e) {
+		} catch (Exception e) {
 			throw new Exception("Error leer de la base de datos " + _fileOutput + "\n\tDetalles: "
 					+ e.getMessage());
 		} finally {
