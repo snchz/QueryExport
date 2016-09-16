@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -45,14 +47,8 @@ public class ExportadorQuery {
 		System.out.println("Leyendo parametros...");
 		LeerParametros();
 		System.out.println("Lanzando query...");
-		List<String[]> resultList = ObtenerResulsetQuery();
-
 		System.out.println("Escribiendo fichero (extension " + _EXTENSION.toString() + " )...");
-		if (_EXTENSION == EXTENSION.CSV) {
-			EscribirCSV(resultList);
-		} else if (_EXTENSION == EXTENSION.XLSX) {
-			EscribirXLSX(resultList);
-		}
+		ObtenerResulsetQuery();
 		System.out.println("Finalizada la generacion del fichero.");
 
 		System.out.println("Compresion " + _COMPRESION.toString());
@@ -153,65 +149,15 @@ public class ExportadorQuery {
 	}
 
 	/**
-	 * Guarda el resultado de la query como CSV separado por punto y coma.
-	 * @param resultList Lista que se va a guardar en fichero CSV
+	 * Ejecuta la query y la guarda a fichero.
+	 * @return OK o KO
 	 * @throws Exception
 	 */
-	private void EscribirCSV(List<String[]> resultList) throws Exception {
-		CSVWriter wr;
-		try {
-			wr = new CSVWriter(new FileWriter(_fileOutput), ';', CSVWriter.NO_QUOTE_CHARACTER);
-			wr.writeAll(resultList, true);
-			wr.flush();
-			wr.close();
-
-			resultList.clear();
-		} catch (IOException e) {
-			throw new Exception("Error al generar CSV " + _fileOutput + "\n\tDetalles: " + e.getMessage());
-		}
-	}
-
-	/**
-	 * Guarda el resultado de la query como XLSX.
-	 * @param resultList Lista que se va a guardar en fichero XLSX
-	 * @throws Exception
-	 */
-	private void EscribirXLSX(List<String[]> resultList) throws Exception {
-		SXSSFWorkbook wb = new SXSSFWorkbook();
-		wb.setCompressTempFiles(true);
-
-		SXSSFSheet sh = (SXSSFSheet) wb.createSheet("Hoja1");
-		// keep 100 rows in memory, exceeding rows will be flushed to disk
-		sh.setRandomAccessWindowSize(100);
-		int totalColumnas = resultList.get(0).length;
-		int totalFilas = resultList.size();
-
-		// Datos
-		for (int x = 0; x < totalFilas; x++) {
-			Row row = sh.createRow(x);
-			for (int y = 0; y < totalColumnas; y++) {
-				Cell cell = row.createCell(y);
-				cell.setCellValue(resultList.get(x)[y].toString());
-			}
-		}
-
-		FileOutputStream out = new FileOutputStream(_fileOutput);
-		wb.write(out);
-		out.close();
-		resultList.clear();
-		wb.close();
-	}
-
-	/**
-	 * Ejecuta la query y la devuelve en una lista.
-	 * @return Lista de Arrays con el resultado de la query. Cada array es una fila.
-	 * @throws Exception
-	 */
-	private List<String[]> ObtenerResulsetQuery() throws Exception {
+	private String ObtenerResulsetQuery() throws Exception {
 		Statement stmt = null;
 		Connection conn = null;
 		ResultSet rs = null;
-		List<String[]> resultList = new ArrayList<String[]>();
+		String resultado="OK";
 
 		try {
 			System.out.println("[Paso 1 de 3] Buscando driver " + _driver + "...");
@@ -224,28 +170,30 @@ public class ExportadorQuery {
 			System.out.println("[Paso 3 de 3] Lanzando query...");
 			rs = stmt.executeQuery(_query);
 			System.out.println("Query obtenida.");
-			System.out.println("Almacenando en la RAM...");
+			System.out.println("Guardando a fichero...");
 			
-			List<String> row = null;
-
 			ResultSetMetaData metaData = rs.getMetaData();
 			Integer columnCount = metaData.getColumnCount();
 
 			// cabecera
-			row = new ArrayList<String>();
+			List<String> row = new ArrayList<String>();
 			for (int i = 1; i <= columnCount; i++)
 				row.add(metaData.getColumnName(i).toString());
-			resultList.add(row.toArray(new String[row.size()]));
+			escribirLinea(row.toArray(new String[row.size()]));
+			//resultList.add(row.toArray(new String[row.size()]));
 			
 			// datos
 			while (rs.next()) {
 				row = new ArrayList<String>();
 				for (int i = 1; i <= columnCount; i++)
 					row.add(rs.getObject(i).toString());
-				resultList.add(row.toArray(new String[row.size()]));
+				escribirLinea(row.toArray(new String[row.size()]));
+				//resultList.add(row.toArray(new String[row.size()]));
 			}
+			cerrarConexiones();
 		} catch (Exception e) {
-			throw new Exception("Error leer de la base de datos " + _fileOutput + "\n\tDetalles: "
+			resultado="KO";
+			throw new Exception("Error al generar informe." + _fileOutput + "\n\tDetalles: "
 					+ e.getMessage());
 		} finally {
 			if (rs != null)
@@ -255,7 +203,86 @@ public class ExportadorQuery {
 			if (conn != null)
 				conn.close();
 		}
-		return resultList;
+		return resultado;
+	}
+
+	/**
+	 * Escribe una linea en el fichero.
+	 * @param strings Array de string con los datos de las columnas de la linea
+	 * @throws Exception
+	 */
+	private void escribirLinea(String[] strings) throws Exception {
+		if (_EXTENSION == EXTENSION.CSV) {
+			escribirLineaCSV(strings);
+		} else if (_EXTENSION == EXTENSION.XLSX) {
+			escribirLineaXLSX(strings);
+		}
+	}
+
+	private SXSSFWorkbook wb;
+	private SXSSFSheet sh;
+	private FileOutputStream out;
+	private int proximaFila;
+	/**
+	 * Escribe linea en Excel
+	 * @param strings
+	 * @throws FileNotFoundException
+	 */
+	private void escribirLineaXLSX(String[] strings) throws FileNotFoundException {
+		if (wb==null){
+			proximaFila=0;
+			wb = new SXSSFWorkbook();
+			wb.setCompressTempFiles(true);
+			sh = (SXSSFSheet) wb.createSheet("Hoja1");
+			// keep 100 rows in memory, exceeding rows will be flushed to disk
+			sh.setRandomAccessWindowSize(100);
+			out = new FileOutputStream(_fileOutput);
+		}
+
+		int totalColumnas = strings.length;
+		
+		Row row = sh.createRow(proximaFila);
+		for (int y = 0; y < totalColumnas; y++) {
+			Cell cell = row.createCell(y);
+			cell.setCellValue(strings[y].toString());
+		}
+		proximaFila++;
+	}
+
+	private CSVWriter wr;
+	/**
+	 * Escribe linea en CSV
+	 * @param strings
+	 * @throws Exception
+	 */
+	private void escribirLineaCSV(String[] strings) throws Exception {
+		try {
+			if (wr==null)
+				wr = new CSVWriter(new FileWriter(_fileOutput), ';', CSVWriter.NO_QUOTE_CHARACTER);
+			wr.writeNext(strings);
+		} catch (IOException e) {
+			throw new Exception("Error al generar CSV " + _fileOutput + "\n\tDetalles: " + e.getMessage());
+		}
+	}
+	
+	/**
+	 * Cierra conexiones a fichero despues de crear los distintos ficheros.
+	 * @throws Exception
+	 */
+	private void cerrarConexiones() throws Exception{
+		try {
+			if (wr!=null){
+				wr.flush();
+				wr.close();
+			}
+			if (wb!=null){
+				wb.write(out);
+				out.close();
+				wb.close();
+			}
+		} catch (IOException e) {
+			throw new Exception("Error cerrando conexiones.\n\tDetalles: " + e.getMessage());
+		}
 	}
 
 }
