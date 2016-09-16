@@ -44,18 +44,15 @@ public class ExportadorQuery {
 	 * @throws Exception
 	 */
 	public void Ejecutar() throws Exception {
-		System.out.println("Leyendo parametros...");
+		System.out.println("[...] Leyendo parametros...");
 		LeerParametros();
-		System.out.println("Lanzando query...");
-		System.out.println("Escribiendo fichero (extension " + _EXTENSION.toString() + " )...");
+		System.out.println("[...] Escribiendo fichero (extension " + _EXTENSION.toString() + " )...");
 		ObtenerResulsetQuery();
-		System.out.println("Finalizada la generacion del fichero.");
-
-		System.out.println("Compresion " + _COMPRESION.toString());
+		System.out.println("[...] Compresión solicitada: " + _COMPRESION.toString());
 		if (_COMPRESION == EXTENSION.ZIP) {
-			System.out.println("Comprimiendo fichero...");
+			System.out.println("[...] Comprimiendo fichero...");
 			Comprimir();
-			System.out.println("Borrando fichero origen...");
+			System.out.println("[...] Borrando fichero origen...");
 			BorrarFicheroSinComprimir();
 		}
 	}
@@ -160,17 +157,17 @@ public class ExportadorQuery {
 		String resultado="OK";
 
 		try {
-			System.out.println("[Paso 1 de 3] Buscando driver " + _driver + "...");
+			System.out.println("[Paso 1 de 4] Buscando driver " + _driver + "...");
 			Class.forName(_driver);
-			System.out.println("Driver " + _driver + " encontrado.");
-			System.out.println("[Paso 2 de 3] Realizando conexion " + _url + "...");
+			System.out.println("[...........] Driver " + _driver + " encontrado.");
+			System.out.println("[Paso 2 de 4] Realizando conexion " + _url + "...");
 			conn = DriverManager.getConnection(_url, _user, _pass);
-			System.out.println("Conexion " + _url + " realizada.");
+			System.out.println("[...........] Conexion " + _url + " realizada.");
 			stmt = conn.createStatement();
-			System.out.println("[Paso 3 de 3] Lanzando query...");
+			System.out.println("[Paso 3 de 4] Lanzando query...");
 			rs = stmt.executeQuery(_query);
-			System.out.println("Query obtenida.");
-			System.out.println("Guardando a fichero...");
+			System.out.println("[...........] Query obtenida.");
+			System.out.println("[Paso 3 de 4] Guardando a fichero...");
 			
 			ResultSetMetaData metaData = rs.getMetaData();
 			Integer columnCount = metaData.getColumnCount();
@@ -190,6 +187,7 @@ public class ExportadorQuery {
 				escribirLinea(row.toArray(new String[row.size()]));
 				//resultList.add(row.toArray(new String[row.size()]));
 			}
+			System.out.println("[...........] Fichero generado.");
 			cerrarConexiones();
 		} catch (Exception e) {
 			resultado="KO";
