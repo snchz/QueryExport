@@ -1,104 +1,90 @@
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.xssf.streaming.SXSSFSheet;
-import org.apache.poi.xssf.streaming.SXSSFWorkbook;
-
-import com.opencsv.*;
 
 public class ExportadorQuery {
-	private String _fileOutput, _query, _driver, _url, _user, _pass, _CONFIG = "Configuracion.config";
-
-	private enum EXTENSION {
-		ZIP, CSV, XLSX, NONE
+	private String _fileOutput, _fileError, _fileEjecutando, _fileOK, _fileRequisito,_query, _driver, _url, _user, _pass;
+	private String _fileConfig;						//Archivo de configuracion con la ejecucion a realizar
+	private Fichero _ficheroSalida,_ficheroError,_ficheroEjecutando, _ficheroOK, _ficheroRequisito;
+	private boolean parametrosLeidos;
+	
+	private enum EXTENSION {					//Tipos de extensiones admitidas
+		zip, csv, xlsx, error, ejecutando, config, ok, none
 	};
-
-	private EXTENSION _EXTENSION, _COMPRESION;
+	private EXTENSION _extensionSalida, _compresion;
+	
 
 	/**
-	 * 
+	 * Constructor con parámetro del archivo de configuración
+	 * El fichero debe tener extension .config
 	 * @param configFile Fichero de Configuración
 	 */
 	public ExportadorQuery(String configFile) {
-		_CONFIG = configFile;
+		_fileConfig = configFile;	//Contenido parecido a querys\\archivo.config
+		parametrosLeidos=leerParametros();
 	}
 
 	/**
 	 * Metodo principal. Lee el archivo de configuración y ejecuta la query solicitada.
-	 * @throws Exception
 	 */
-	public void Ejecutar() throws Exception {
+	public String Ejecutar(){
+		String res="IGNORAR";
 		System.out.println("[...] Leyendo parametros...");
-		LeerParametros();
-		System.out.println("[...] Escribiendo fichero (extension " + _EXTENSION.toString() + " )...");
-		ObtenerResulsetQuery();
-		System.out.println("[...] Compresión solicitada: " + _COMPRESION.toString());
-		if (_COMPRESION == EXTENSION.ZIP) {
-			System.out.println("[...] Comprimiendo fichero...");
-			Comprimir();
-			System.out.println("[...] Borrando fichero origen...");
-			BorrarFicheroSinComprimir();
+		if (parametrosLeidos){
+			_ficheroEjecutando=new Fichero(_fileEjecutando);
+			_ficheroRequisito=new Fichero(_fileRequisito);
+			_ficheroOK=new Fichero(_fileOK);
+			if(!_ficheroEjecutando.existeFichero() && _ficheroRequisito.existeFichero() && !_ficheroOK.existeFichero()){
+				_ficheroEjecutando.crearFicheroYCerrarlo();
+				
+				_ficheroError=new Fichero(_fileError);
+				if (!_ficheroError.existeFichero()){
+					
+					System.out.println("[...] Escribiendo fichero (extension " + _extensionSalida.toString() + " )...");
+					_ficheroSalida=new Fichero(_fileOutput);
+					int registros=ObtenerResulsetQuery();
+					System.out.println("[...] Se han escrito "+registros+" registros.");
+					if (registros==0){
+						_ficheroSalida.borrarFichero();
+						res="SIN DATOS";
+					}else if (registros>0){
+						_ficheroOK.crearFicheroYCerrarlo();
+						res="OK";
+					}
+					
+				}else{
+					System.out.println("[...] Está en error.");
+					res="IGNORAR";
+				}
+				System.out.println("[...] Compresión solicitada: " + _compresion.toString());
+				if (_compresion == EXTENSION.zip && _ficheroSalida.existeFichero()) {
+					System.out.println("[...] Comprimiendo fichero...");
+					_ficheroSalida.comprimir();
+					System.out.println("[...] Borrando fichero origen...");
+					_ficheroSalida.borrarFichero();
+				}
+				
+				System.out.println("[...] Borrando fichero testigo Ejecutando...");
+				_ficheroEjecutando.borrarFichero();
+			}else{
+				System.out.println("[...] Ya está ejecutando o el fichero requisito no existe o el fichero ok ya existe.");
+				res="IGNORAR";
+			}					
 		}
+		return res;
 	}
 
-	/**
-	 * Borra fichero original para dejar solo el comprimido.
-	 * @throws Exception
-	 */
-	private void BorrarFicheroSinComprimir() throws Exception {
-		try {
-			File fichero = new File(_fileOutput);
-			fichero.delete();
-		} catch (Exception e) {
-			throw new Exception("Error al borrar el archivo " + _fileOutput + "\n\tDetalles: " + e.getMessage());
-		}
-	}
+	
 
-	/**
-	 * Comprimir el fichero resutante.
-	 * @throws Exception
-	 */
-	private void Comprimir() throws Exception {
-		try {
-			// input file
-			FileInputStream in = new FileInputStream(_fileOutput);
-
-			// out put file
-			String _fileOutputZip = _fileOutput.substring(0, _fileOutput.lastIndexOf(".")) + ".zip";
-			ZipOutputStream out = new ZipOutputStream(new FileOutputStream(_fileOutputZip));
-
-			// name the file inside the zip file
-			out.putNextEntry(new ZipEntry(_fileOutput));
-
-			// buffer size
-			byte[] b = new byte[1024];
-			int count;
-
-			while ((count = in.read(b)) > 0) {
-				out.write(b, 0, count);
-			}
-			out.close();
-			in.close();
-		} catch (IOException e) {
-			throw new Exception("Error al Comprimir el archivo " + _fileOutput + "\n\tDetalles: " + e.getMessage());
-		}
-	}
+	
 
 	/**
 	 * Lee los parámetros del fichero de configuración.
@@ -106,55 +92,73 @@ public class ExportadorQuery {
 	 * Linea 2. Url de conexion a la base de datos. Por ejemplo: jdbc:oracle:thin:@localhost:1521:mkyong
 	 * Linea 3. Usuario de conexion a la base de datos.
 	 * Linea 4. Password de conexion a la base de datos.
-	 * Linea 5. Nombre del fichero de salida de la consulta.
+	 * Linea 5. Extension del fichero de salida de la consulta. En funcion del tipo de extension de salida hace una cosa u otra
+	 *          Si es .ok genera el fichero solo el numero de registros de la consulta es mayor a 0 (devuelve datos)
 	 * Linea 6. Query a ejecutar.
 	 * Linea 7. Si es ZIP, el archivo destino se comprime. En otro caso se deja sin comprimir
-	 * @throws Exception
+	 * Linea 8. Fichero ok. Si este fichero no existe, no se ejecuta.
 	 */
-	private void LeerParametros() throws Exception {
+	private boolean leerParametros(){
+		boolean res=false;
 		try {
-			List<String> lines = FileUtils.readLines(new File(_CONFIG));
+			if (!_fileConfig.contains(".config")){
+				throw new Exception("Error extension de fichero de configuracion incorrecta " + _fileConfig);
+			}
+			List<String> lines = FileUtils.readLines(new File(_fileConfig));
 			_driver = lines.get(0);
 			_url = lines.get(1);
 			_user = lines.get(2);
 			_pass = lines.get(3);
-			_fileOutput = lines.get(4);
+			String extension = lines.get(4);
 			try {
-				if (_fileOutput.substring(_fileOutput.lastIndexOf(".") + 1, _fileOutput.length()).toUpperCase().trim()
-						.equals("CSV"))
-					_EXTENSION = EXTENSION.CSV;
-				else if (_fileOutput.substring(_fileOutput.lastIndexOf(".") + 1, _fileOutput.length()).toUpperCase()
-						.trim().equals("XLSX"))
-					_EXTENSION = EXTENSION.XLSX;
+				if (extension.equals(EXTENSION.csv.toString()))
+					_extensionSalida = EXTENSION.csv;
+				else if (extension.equals(EXTENSION.ok.toString()))
+					_extensionSalida = EXTENSION.ok;
+				else if (extension.equals(EXTENSION.xlsx.toString()))
+					_extensionSalida = EXTENSION.xlsx;
 				else
-					_EXTENSION = EXTENSION.NONE;
+					_extensionSalida = EXTENSION.none;
 			} catch (Exception e) {
-				_EXTENSION = EXTENSION.NONE;
+				_extensionSalida = EXTENSION.none;
+				throw new Exception("Error en la linea de extension inválida: "+extension);
 			}
+			_fileOutput=_fileConfig.replaceAll("."+EXTENSION.config.toString(), "."+_extensionSalida.toString());
+
+			_fileError=_fileConfig.replaceAll("."+EXTENSION.config.toString(), "."+EXTENSION.error.toString());
+			_fileEjecutando=_fileConfig.replaceAll("."+EXTENSION.config.toString(), "."+EXTENSION.ejecutando.toString());
+			_fileOK=_fileConfig.replaceAll("."+EXTENSION.config.toString(), "."+EXTENSION.ok.toString());
 
 			_query = lines.get(5);
 
-			if (lines.get(6).toUpperCase().trim().equals("ZIP"))
-				_COMPRESION = EXTENSION.ZIP;
+			if (lines.get(6).trim().equals(EXTENSION.zip.toString()))
+				_compresion = EXTENSION.zip;
 			else
-				_COMPRESION = EXTENSION.NONE;
-
-		} catch (IOException e) {
-			throw new Exception(
-					"Error al leer el archivo de parametros " + _CONFIG + "\n\tDetalles: " + e.getMessage());
+				_compresion = EXTENSION.none;
+			try{
+				_fileRequisito= lines.get(7);
+			}catch (Exception e){
+				_fileRequisito=_fileConfig;
+			}
+			if (_fileRequisito.trim().equals(""))
+				_fileRequisito=_fileConfig;
+			res=true;
+		} catch (Exception e) {
+			System.err.println("Error al leer el archivo de parametros " + _fileConfig + "\n\tDetalles: " + e.getMessage());
+			res=false;
 		}
+		return res;
 	}
 
 	/**
 	 * Ejecuta la query y la guarda a fichero.
-	 * @return OK o KO
-	 * @throws Exception
+	 * @return -1 si error, 0 si ok, numero mayor que 0 el numero de registros
 	 */
-	private String ObtenerResulsetQuery() throws Exception {
+	private int ObtenerResulsetQuery(){
 		Statement stmt = null;
 		Connection conn = null;
 		ResultSet rs = null;
-		String resultado="OK";
+		int numeroRegistros=0;
 
 		try {
 			System.out.println("[Paso 1 de 4] Buscando driver " + _driver + "...");
@@ -172,115 +176,52 @@ public class ExportadorQuery {
 			ResultSetMetaData metaData = rs.getMetaData();
 			Integer columnCount = metaData.getColumnCount();
 
+			_ficheroSalida.crearFichero();
 			// cabecera
 			List<String> row = new ArrayList<String>();
 			for (int i = 1; i <= columnCount; i++)
 				row.add(metaData.getColumnName(i).toString());
-			escribirLinea(row.toArray(new String[row.size()]));
+			_ficheroSalida.escribirLinea(row.toArray(new String[row.size()]));
 			//resultList.add(row.toArray(new String[row.size()]));
 			
 			// datos
 			while (rs.next()) {
+				numeroRegistros++;
 				row = new ArrayList<String>();
 				for (int i = 1; i <= columnCount; i++)
 					row.add(rs.getObject(i).toString());
-				escribirLinea(row.toArray(new String[row.size()]));
+				_ficheroSalida.escribirLinea(row.toArray(new String[row.size()]));
 				//resultList.add(row.toArray(new String[row.size()]));
 			}
 			System.out.println("[...........] Fichero generado.");
-			cerrarConexiones();
-		} catch (Exception e) {
-			resultado="KO";
-			throw new Exception("Error al generar informe." + _fileOutput + "\n\tDetalles: "
+			_ficheroSalida.cerrarConexiones();
+		} catch (ClassNotFoundException e) {
+			numeroRegistros=-1;
+			_ficheroError.crearFicheroYCerrarlo();
+			System.err.println("Error Libreria JAVA para Base de datos no encontrada." + _fileOutput + "\n\tDetalles: "
+					+ e.getMessage());
+		} catch (SQLException e) {
+			numeroRegistros=-1;
+			_ficheroError.crearFicheroYCerrarlo();
+			System.out.println("Error al conectar. Credenciles o query incorrectas." + _fileOutput + "\n\tDetalles: "
 					+ e.getMessage());
 		} finally {
-			if (rs != null)
-				rs.close();
-			if (stmt != null)
-				stmt.close();
-			if (conn != null)
-				conn.close();
+				try {
+					if (rs != null)
+						rs.close();
+					if (stmt != null)
+						stmt.close();
+					if (conn != null)
+						conn.close();
+				} catch (SQLException e) {
+					System.out.println("Error al cerrar conexiones." + _fileOutput + "\n\tDetalles: "
+							+ e.getMessage());
+				}
 		}
-		return resultado;
+		return numeroRegistros;
 	}
 
-	/**
-	 * Escribe una linea en el fichero.
-	 * @param strings Array de string con los datos de las columnas de la linea
-	 * @throws Exception
-	 */
-	private void escribirLinea(String[] strings) throws Exception {
-		if (_EXTENSION == EXTENSION.CSV) {
-			escribirLineaCSV(strings);
-		} else if (_EXTENSION == EXTENSION.XLSX) {
-			escribirLineaXLSX(strings);
-		}
-	}
-
-	private SXSSFWorkbook wb;
-	private SXSSFSheet sh;
-	private FileOutputStream out;
-	private int proximaFila;
-	/**
-	 * Escribe linea en Excel
-	 * @param strings
-	 * @throws FileNotFoundException
-	 */
-	private void escribirLineaXLSX(String[] strings) throws FileNotFoundException {
-		if (wb==null){
-			proximaFila=0;
-			wb = new SXSSFWorkbook();
-			wb.setCompressTempFiles(true);
-			sh = (SXSSFSheet) wb.createSheet("Hoja1");
-			// keep 100 rows in memory, exceeding rows will be flushed to disk
-			sh.setRandomAccessWindowSize(100);
-			out = new FileOutputStream(_fileOutput);
-		}
-
-		int totalColumnas = strings.length;
-		
-		Row row = sh.createRow(proximaFila);
-		for (int y = 0; y < totalColumnas; y++) {
-			Cell cell = row.createCell(y);
-			cell.setCellValue(strings[y].toString());
-		}
-		proximaFila++;
-	}
-
-	private CSVWriter wr;
-	/**
-	 * Escribe linea en CSV
-	 * @param strings
-	 * @throws Exception
-	 */
-	private void escribirLineaCSV(String[] strings) throws Exception {
-		try {
-			if (wr==null)
-				wr = new CSVWriter(new FileWriter(_fileOutput), ';', CSVWriter.NO_QUOTE_CHARACTER);
-			wr.writeNext(strings);
-		} catch (IOException e) {
-			throw new Exception("Error al generar CSV " + _fileOutput + "\n\tDetalles: " + e.getMessage());
-		}
-	}
 	
-	/**
-	 * Cierra conexiones a fichero despues de crear los distintos ficheros.
-	 * @throws Exception
-	 */
-	private void cerrarConexiones() throws Exception{
-		try {
-			if (wr!=null){
-				wr.flush();
-				wr.close();
-			}
-			if (wb!=null){
-				wb.write(out);
-				out.close();
-				wb.close();
-			}
-		} catch (IOException e) {
-			throw new Exception("Error cerrando conexiones.\n\tDetalles: " + e.getMessage());
-		}
-	}
+
 
 }
