@@ -50,14 +50,18 @@ public class ExportadorQuery {
 					
 					System.out.println("[...] Escribiendo fichero (extension " + _extensionSalida.toString() + " )...");
 					_ficheroSalida=new Fichero(_fileOutput);
-					int registros=ObtenerResulsetQuery();
+					Combo combo_res=ObtenerResulsetQuery();
+					int registros=combo_res.numeroRegistros;
 					System.out.println("[...] Se han escrito "+registros+" registros.");
 					if (registros==0){
 						_ficheroSalida.borrarFichero();
 						res="SIN DATOS";
-					}else if (registros>0){
+					}else if (registros==1){
 						_ficheroOK.crearFicheroYCerrarlo();
-						res="OK";
+						res=combo_res.resultado;
+					}else if (registros>1){
+						_ficheroOK.crearFicheroYCerrarlo();
+						res="MULTIDATOS";
 					}
 					
 				}else{
@@ -149,16 +153,23 @@ public class ExportadorQuery {
 		}
 		return res;
 	}
+	
+	private static class Combo {
+		   String resultado;
+		   int numeroRegistros;
+	}
 
 	/**
 	 * Ejecuta la query y la guarda a fichero.
 	 * @return -1 si error, 0 si ok, numero mayor que 0 el numero de registros
 	 */
-	private int ObtenerResulsetQuery(){
+	private Combo ObtenerResulsetQuery(){
 		Statement stmt = null;
 		Connection conn = null;
 		ResultSet rs = null;
-		int numeroRegistros=0;
+		Combo res=new Combo();
+		res.numeroRegistros=0;
+		res.resultado="";
 
 		try {
 			System.out.println("[Paso 1 de 4] Buscando driver " + _driver + "...");
@@ -186,22 +197,23 @@ public class ExportadorQuery {
 			
 			// datos
 			while (rs.next()) {
-				numeroRegistros++;
+				res.numeroRegistros++;
 				row = new ArrayList<String>();
 				for (int i = 1; i <= columnCount; i++)
 					row.add(rs.getObject(i).toString());
 				_ficheroSalida.escribirLinea(row.toArray(new String[row.size()]));
+				res.resultado=row.get(0);
 				//resultList.add(row.toArray(new String[row.size()]));
 			}
 			System.out.println("[...........] Fichero generado.");
 			_ficheroSalida.cerrarConexiones();
 		} catch (ClassNotFoundException e) {
-			numeroRegistros=-1;
+			res.numeroRegistros=-1;
 			_ficheroError.crearFicheroYCerrarlo();
 			System.err.println("Error Libreria JAVA para Base de datos no encontrada." + _fileOutput + "\n\tDetalles: "
 					+ e.getMessage());
 		} catch (SQLException e) {
-			numeroRegistros=-1;
+			res.numeroRegistros=-1;
 			_ficheroError.crearFicheroYCerrarlo();
 			System.out.println("Error al conectar. Credenciles o query incorrectas." + _fileOutput + "\n\tDetalles: "
 					+ e.getMessage());
@@ -218,7 +230,7 @@ public class ExportadorQuery {
 							+ e.getMessage());
 				}
 		}
-		return numeroRegistros;
+		return res;
 	}
 
 	
