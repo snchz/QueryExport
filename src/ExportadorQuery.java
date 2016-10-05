@@ -36,7 +36,7 @@ public class ExportadorQuery {
 	 * Metodo principal. Lee el archivo de configuración y ejecuta la query solicitada.
 	 */
 	public String Ejecutar(){
-		String res="IGNORAR";
+		String res=null;
 		System.out.println("[...] Leyendo parametros...");
 		if (parametrosLeidos){
 			_ficheroEjecutando=new Fichero(_fileEjecutando);
@@ -58,15 +58,15 @@ public class ExportadorQuery {
 						res="SIN DATOS";
 					}else if (registros==1){
 						_ficheroOK.crearFicheroYCerrarlo();
-						res=combo_res.resultado;
+						res="OK "+combo_res.resultado;
 					}else if (registros>1){
 						_ficheroOK.crearFicheroYCerrarlo();
-						res="MULTIDATOS";
+						res="MULTIDATOS ("+registros+" registros)";
 					}
 					
 				}else{
 					System.out.println("[...] Está en error.");
-					res="IGNORAR";
+					res=null;
 				}
 				System.out.println("[...] Compresión solicitada: " + _compresion.toString());
 				if (_compresion == EXTENSION.zip && _ficheroSalida.existeFichero()) {
@@ -80,7 +80,7 @@ public class ExportadorQuery {
 				_ficheroEjecutando.borrarFichero();
 			}else{
 				System.out.println("[...] Ya está ejecutando o el fichero requisito no existe o el fichero ok ya existe.");
-				res="IGNORAR";
+				res=null;
 			}					
 		}
 		return res;
