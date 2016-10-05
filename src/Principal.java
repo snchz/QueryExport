@@ -35,8 +35,8 @@ public class Principal {
 		System.out.println("TIEMPO DE EJECUCION (minutos): "+minutos);
 		//TODO:Escribor en log
 		
-		if (!resultado.equals("IGNORAR")){
-			String lineaLog=(new SimpleDateFormat("yyyy/MM/dd HH:mm:ss")).format(horaInicio)+"\t"+(new SimpleDateFormat("HH:mm:ss")).format(horaFin)+"\t("+String.format("%010d", minutos)+" min)\t"+resultado+"\t"+args[0]+"\n";
+		if (resultado != null){
+			String lineaLog=(new SimpleDateFormat("yyyy/MM/dd HH:mm:ss")).format(horaInicio)+"\t"+(new SimpleDateFormat("HH:mm:ss")).format(horaFin)+"\t("+String.format("%04d", minutos)+" min)\t"+String.format("%1$-50s",args[0])+"\t"+resultado+"\n";
 			Fichero log=new Fichero("LOG.txt");
 			log.escribirLineaAlFinal(lineaLog);
 		}
