@@ -10,6 +10,7 @@ import java.util.zip.ZipOutputStream;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 
@@ -22,7 +23,6 @@ public class Fichero {
 	
 	//XLSX:
 	private SXSSFWorkbook _wb;
-	private SXSSFSheet _sh;
 	private FileOutputStream _out;
 	private int _proximaFila;
 	
@@ -118,7 +118,7 @@ public class Fichero {
 	}
 	
 	/**
-	 * Cre el fichero según su extension. Por ahora se aceptan extensiones csv, ok, xlsx
+	 * Cre el fichero segÃºn su extension. Por ahora se aceptan extensiones csv, ok, xlsx
 	 * @return
 	 */
 	public boolean crearFichero(){
@@ -139,9 +139,6 @@ public class Fichero {
 				_proximaFila=0;
 				_wb = new SXSSFWorkbook();
 				_wb.setCompressTempFiles(true);
-				_sh = (SXSSFSheet) _wb.createSheet("Hoja1");
-				// keep 100 rows in memory, exceeding rows will be flushed to disk
-				_sh.setRandomAccessWindowSize(100);
 				_out = new FileOutputStream(_fileOutput);
 			}
 			else{
@@ -161,12 +158,12 @@ public class Fichero {
 	 * Escribe una linea en el fichero. Previamente debe estar creado.
 	 * @param strings Array de string con los datos de las columnas de la linea
 	 */
-	public void escribirLinea(String[] strings) {
+	public void escribirLinea(String[] strings, String hoja) {
 		try{
 			if (_extensionSalida== EXTENSION.csv || _extensionSalida== EXTENSION.ok) {
 				escribirLineaCSV(strings);
 			} else if (_extensionSalida == EXTENSION.xlsx) {
-				escribirLineaXLSX(strings);
+				escribirLineaXLSX(strings,hoja);
 			} else {
 				System.err.println("Tipo de extension de salida no reconocido: "+_extensionSalida+"\n\t\tTipos reconocidos: xlsx, csv, ok.");
 			}
@@ -176,7 +173,7 @@ public class Fichero {
 	}
 	
 	/**
-	 * Si no exsite el fichero lo crea. Añade linea al final.
+	 * Si no exsite el fichero lo crea. AÃ±ade linea al final.
 	 * @param linea
 	 * @return
 	 */
@@ -243,8 +240,20 @@ public class Fichero {
 	 * @param strings
 	 * @throws FileNotFoundException
 	 */
-	private void escribirLineaXLSX(String[] strings){
+	private void escribirLineaXLSX(String[] strings,String hoja){
 		int totalColumnas = strings.length;
+		
+		SXSSFSheet _sh;
+		Sheet s=_wb.getSheet(hoja);
+		if (s==null){//si la hoja no existe, la creo
+			_sh = (SXSSFSheet) _wb.createSheet(hoja);
+			_proximaFila=0;
+		}
+		else
+			 _sh = (SXSSFSheet) s;
+			
+		//reserva 100 filas en memoria, si las excede reserva otras tantas
+		_sh.setRandomAccessWindowSize(100);
 		
 		Row row = _sh.createRow(_proximaFila);
 		for (int y = 0; y < totalColumnas; y++) {
@@ -265,17 +274,17 @@ public class Fichero {
 	private boolean comprimir(String fichero){
 		boolean res=false;
 		try {
-			// input file
+			//fichero de entrada
 			FileInputStream in = new FileInputStream(fichero);
 
-			// out put file
+			//fichero de salida
 			String _fileOutputZip = fichero.substring(0, fichero.lastIndexOf(".")) + ".zip";
 			ZipOutputStream out = new ZipOutputStream(new FileOutputStream(_fileOutputZip));
 
-			// name the file inside the zip file
+			//nombre del fichero a comprimir
 			out.putNextEntry(new ZipEntry(fichero));
 
-			// buffer size
+			//tamaÃ±o del buffer
 			byte[] b = new byte[1024];
 			int count;
 
@@ -318,7 +327,7 @@ public class Fichero {
 		String[] lineas= new String[2];
 		lineas[0]="Hola";
 		lineas[1]="Adios";
-		f.escribirLinea(lineas);
+		f.escribirLinea(lineas,"Hoja1");
 		f.cerrarConexiones();
 	}
 	
