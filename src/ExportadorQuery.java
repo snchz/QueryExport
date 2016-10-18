@@ -5,13 +5,13 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.StringTokenizer;
 
 public class ExportadorQuery {
 	private String _fileOutput, _fileError, _fileEjecutando, _fileOK, _fileRequisito, _driver, _url, _user, _pass;
-	private HashMap<String,String> _querys;
+	private LinkedHashMap<String, String> _querys; //utilizar LinkedHashMap para añadir las querys en FIFO y determinar el orden que queremos en las hojas
 	private String _fileConfig;						//Archivo de configuracion con la ejecucion a realizar
 	private Fichero _ficheroSalida,_ficheroError,_ficheroEjecutando, _ficheroOK, _ficheroRequisito;
 	private boolean parametrosLeidos;
@@ -140,7 +140,7 @@ public class ExportadorQuery {
 			String query = config.obtenerValorConfiguracion(Configuracion.QUERY);
 			String querys = config.obtenerValorConfiguracion(Configuracion.MULTI_QUERY);
 			String hojas = config.obtenerValorConfiguracion(Configuracion.MULTI_SALIDA);
-			_querys=new HashMap<String, String>();
+			_querys=new LinkedHashMap<String, String>();
 			if (query!=null){
 				_querys.put("Hoja1", query);
 			}else if (querys!=null){
@@ -219,17 +219,19 @@ public class ExportadorQuery {
 				for (int i = 1; i <= columnCount; i++)
 					row.add(metaData.getColumnName(i).toString());
 				_ficheroSalida.escribirLinea(row.toArray(new String[row.size()]),hoja);
-				//resultList.add(row.toArray(new String[row.size()]));
 				
 				// datos
 				while (rs.next()) {
 					res.numeroRegistros++;
 					row = new ArrayList<String>();
-					for (int i = 1; i <= columnCount; i++)
-						row.add(rs.getObject(i).toString());
+					for (int i = 1; i <= columnCount; i++){
+						if (rs.getObject(i)==null)//Si llega un nulo escribe la palabra (null)
+							row.add("(null)");
+						else
+							row.add(rs.getObject(i).toString());
+					}
 					_ficheroSalida.escribirLinea(row.toArray(new String[row.size()]),hoja);
 					res.resultado=row.get(0);
-					//resultList.add(row.toArray(new String[row.size()]));
 				}
 			}
 			System.out.println("[...........] Fichero generado.");
