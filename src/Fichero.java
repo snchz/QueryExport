@@ -8,6 +8,11 @@ import java.io.IOException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import net.lingala.zip4j.core.ZipFile;
+import net.lingala.zip4j.exception.ZipException;
+import net.lingala.zip4j.model.ZipParameters;
+import net.lingala.zip4j.util.Zip4jConstants;
+
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -17,6 +22,8 @@ import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import com.opencsv.CSVWriter;
 
 public class Fichero {
+	//Tipos de extensiones admitidas
+	public enum Extensiones {zip, zip7, csv, xlsx, error, ejecutando, config, ok, none}
 	
 	//CSV:
 	private CSVWriter _csv_wr;
@@ -27,11 +34,9 @@ public class Fichero {
 	private int _proximaFila;
 	
 	private String _fileOutput;
-	private EXTENSION _extensionSalida;
+	private Extensiones _extensionSalida;
 	
-	public enum EXTENSION {					//Tipos de extensiones admitidas
-		zip, csv, xlsx, error, ejecutando, config, ok, none
-	};
+	
 
 	/**
 	 * Crear instancia de Fichero. Para crear el fichero invocar la funcion crearFichero
@@ -39,16 +44,16 @@ public class Fichero {
 	 */
 	public Fichero(String fichero){
 		_fileOutput=fichero;
-		if (_fileOutput.substring(_fileOutput.lastIndexOf(".") + 1, _fileOutput.length()).trim().equals(EXTENSION.csv.toString())){
-			_extensionSalida = EXTENSION.csv;
+		if (_fileOutput.substring(_fileOutput.lastIndexOf(".") + 1, _fileOutput.length()).trim().equals(Extensiones.csv.toString())){
+			_extensionSalida = Extensiones.csv;
 		}
-		else if (_fileOutput.substring(_fileOutput.lastIndexOf(".") + 1, _fileOutput.length()).trim().equals(EXTENSION.ok.toString())){
-			_extensionSalida = EXTENSION.ok;
+		else if (_fileOutput.substring(_fileOutput.lastIndexOf(".") + 1, _fileOutput.length()).trim().equals(Extensiones.ok.toString())){
+			_extensionSalida = Extensiones.ok;
 		}
-		else if (_fileOutput.substring(_fileOutput.lastIndexOf(".") + 1, _fileOutput.length()).trim().equals(EXTENSION.xlsx.toString())){
-			_extensionSalida = EXTENSION.xlsx;
+		else if (_fileOutput.substring(_fileOutput.lastIndexOf(".") + 1, _fileOutput.length()).trim().equals(Extensiones.xlsx.toString())){
+			_extensionSalida = Extensiones.xlsx;
 		}else{
-			_extensionSalida = EXTENSION.none;
+			_extensionSalida = Extensiones.none;
 		}
 	}
 	
@@ -59,16 +64,16 @@ public class Fichero {
 	 */
 	public Fichero(String fichero, boolean crear){
 		_fileOutput=fichero;
-		if (_fileOutput.substring(_fileOutput.lastIndexOf(".") + 1, _fileOutput.length()).trim().equals(EXTENSION.csv.toString())){
-			_extensionSalida = EXTENSION.csv;
+		if (_fileOutput.substring(_fileOutput.lastIndexOf(".") + 1, _fileOutput.length()).trim().equals(Extensiones.csv.toString())){
+			_extensionSalida = Extensiones.csv;
 		}
-		else if (_fileOutput.substring(_fileOutput.lastIndexOf(".") + 1, _fileOutput.length()).trim().equals(EXTENSION.ok.toString())){
-			_extensionSalida = EXTENSION.ok;
+		else if (_fileOutput.substring(_fileOutput.lastIndexOf(".") + 1, _fileOutput.length()).trim().equals(Extensiones.ok.toString())){
+			_extensionSalida = Extensiones.ok;
 		}
-		else if (_fileOutput.substring(_fileOutput.lastIndexOf(".") + 1, _fileOutput.length()).trim().equals(EXTENSION.xlsx.toString())){
-			_extensionSalida = EXTENSION.xlsx;
+		else if (_fileOutput.substring(_fileOutput.lastIndexOf(".") + 1, _fileOutput.length()).trim().equals(Extensiones.xlsx.toString())){
+			_extensionSalida = Extensiones.xlsx;
 		}else{
-			_extensionSalida = EXTENSION.none;
+			_extensionSalida = Extensiones.none;
 		}
 		if (crear)
 			this.crearFichero();		
@@ -118,7 +123,7 @@ public class Fichero {
 	}
 	
 	/**
-	 * Cre el fichero segÃºn su extension. Por ahora se aceptan extensiones csv, ok, xlsx
+	 * Cre el fichero según su extension. Por ahora se aceptan extensiones csv, ok, xlsx
 	 * @return
 	 */
 	public boolean crearFichero(){
@@ -130,11 +135,11 @@ public class Fichero {
 		_fileOutput=fichero;
 		
 		try{
-			if (_extensionSalida == EXTENSION.csv || _extensionSalida == EXTENSION.ok){
+			if (_extensionSalida == Extensiones.csv || _extensionSalida == Extensiones.ok){
 				//inicializar variables de fichero CSV:
 				_csv_wr = new CSVWriter(new FileWriter(_fileOutput), ';', CSVWriter.NO_QUOTE_CHARACTER);
 			}
-			else if (_extensionSalida == EXTENSION.xlsx){
+			else if (_extensionSalida == Extensiones.xlsx){
 				//inicializar variables de fichero xslx
 				_proximaFila=0;
 				_wb = new SXSSFWorkbook();
@@ -160,9 +165,9 @@ public class Fichero {
 	 */
 	public void escribirLinea(String[] strings, String hoja) {
 		try{
-			if (_extensionSalida== EXTENSION.csv || _extensionSalida== EXTENSION.ok) {
+			if (_extensionSalida== Extensiones.csv || _extensionSalida== Extensiones.ok) {
 				escribirLineaCSV(strings);
-			} else if (_extensionSalida == EXTENSION.xlsx) {
+			} else if (_extensionSalida == Extensiones.xlsx) {
 				escribirLineaXLSX(strings,hoja);
 			} else {
 				System.err.println("Tipo de extension de salida no reconocido: "+_extensionSalida+"\n\t\tTipos reconocidos: xlsx, csv, ok.");
@@ -173,7 +178,7 @@ public class Fichero {
 	}
 	
 	/**
-	 * Si no exsite el fichero lo crea. AÃ±ade linea al final.
+	 * Si no exsite el fichero lo crea. Añade linea al final.
 	 * @param linea
 	 * @return
 	 */
@@ -263,15 +268,19 @@ public class Fichero {
 		_proximaFila++;
 	}
 	
-	public boolean comprimir(){
-		return this.comprimir(_fileOutput);
+	public boolean comprimir(Extensiones extensionComprimido ){
+		if (extensionComprimido==Extensiones.zip)
+			return this.comprimirZip(_fileOutput);
+		else if (extensionComprimido==Extensiones.zip7)
+			return false;//TODO this.comprimir7zip(_fileOutput);
+		return false;
 	}
 	
 	/**
 	 * Comprimir el fichero resutante.
 	 * @throws Exception
 	 */
-	private boolean comprimir(String fichero){
+	private boolean comprimirZip(String fichero){
 		boolean res=false;
 		try {
 			//fichero de entrada
@@ -284,7 +293,7 @@ public class Fichero {
 			//nombre del fichero a comprimir
 			out.putNextEntry(new ZipEntry(fichero));
 
-			//tamaÃ±o del buffer
+			//tamaño del buffer
 			byte[] b = new byte[1024];
 			int count;
 
@@ -300,6 +309,30 @@ public class Fichero {
 		}
 		return res;
 	}
+	
+	//TODO adaptar a la libreria de zipeo
+	@SuppressWarnings("unused")
+	private boolean comprimirZip(String fichero,long tamanoMaximo){
+		boolean res=false;
+		try {
+			String _fileOutputZip = fichero.substring(0, fichero.lastIndexOf(".")) + ".zip";
+			ZipFile zipFile = new ZipFile(_fileOutputZip);
+			File ficheroEntrada = new File(fichero);
+			
+			ZipParameters parameters = new ZipParameters();
+            parameters.setCompressionMethod(Zip4jConstants.COMP_DEFLATE);
+            parameters.setCompressionLevel(Zip4jConstants.DEFLATE_LEVEL_NORMAL);
+			
+            zipFile.createZipFile(ficheroEntrada, parameters, true, 10485760);
+			res=true;
+		} catch (ZipException e) {
+			System.err.println("Error al Comprimir el archivo " + fichero + "\n\tDetalles: " + e.getMessage());
+			res=false;
+			e.printStackTrace();
+		}
+		return res;
+	}
+	
 	
 	public boolean borrarFichero(){
 		return this.borrarFichero(_fileOutput);
@@ -322,12 +355,13 @@ public class Fichero {
 	}
 	
 	public static void main(String[] args) {
-		Fichero f=new Fichero("fichero.xlsx");
-		f.crearFichero();
-		String[] lineas= new String[2];
+		Fichero f=new Fichero("Balance.csv");
+		//f.crearFichero();
+		/*String[] lineas= new String[2];
 		lineas[0]="Hola";
 		lineas[1]="Adios";
-		f.escribirLinea(lineas,"Hoja1");
+		f.escribirLinea(lineas,"Hoja1");*/
+		//f.comprimirZip("Balance.csv", 10000000);
 		f.cerrarConexiones();
 	}
 	

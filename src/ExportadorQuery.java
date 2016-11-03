@@ -9,23 +9,24 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.StringTokenizer;
 
+
+
+
 public class ExportadorQuery {
 	private String _fileOutput, _fileError, _fileEjecutando, _fileOK, _fileRequisito, _driver, _url, _user, _pass;
-	private LinkedHashMap<String, String> _querys; //utilizar LinkedHashMap para a√±adir las querys en FIFO y determinar el orden que queremos en las hojas
+	private LinkedHashMap<String, String> _querys; //utilizar LinkedHashMap para aÒadir las querys en FIFO y determinar el orden que queremos en las hojas
 	private String _fileConfig;						//Archivo de configuracion con la ejecucion a realizar
 	private Fichero _ficheroSalida,_ficheroError,_ficheroEjecutando, _ficheroOK, _ficheroRequisito;
 	private boolean parametrosLeidos;
 	
-	private enum EXTENSION {					//Tipos de extensiones admitidas
-		zip, csv, xlsx, error, ejecutando, config, ok, none
-	};
-	private EXTENSION _extensionSalida, _compresion;
+	
+	private Fichero.Extensiones _extensionSalida, _compresion;
 	
 	
 	/**
-	 * Constructor con par√°metro del archivo de configuraci√≥n
+	 * Constructor con par·metro del archivo de configuraciÛn
 	 * El fichero debe tener extension .config
-	 * @param configFile Fichero de Configuraci√≥n
+	 * @param configFile Fichero de ConfiguraciÛn
 	 */
 	public ExportadorQuery(String configFile) {
 		_fileConfig = configFile;	//Contenido parecido a querys\\archivo.config
@@ -33,7 +34,7 @@ public class ExportadorQuery {
 	}
 
 	/**
-	 * Metodo principal. Lee el archivo de configuraci√≥n y ejecuta la query solicitada.
+	 * Metodo principal. Lee el archivo de configuraciÛn y ejecuta la query solicitada.
 	 */
 	public String Ejecutar(){
 		String res=null;
@@ -64,20 +65,20 @@ public class ExportadorQuery {
 						res="MULTIDATOS ("+registros+" registros)";
 					}
 				}else{
-					System.out.println("[...] Est√° en error.");
+					System.out.println("[...] Est· en error.");
 					res=null;
 				}
-				System.out.println("[...] Compresi√≥n solicitada: " + _compresion.toString());
-				if (_compresion == EXTENSION.zip && _ficheroSalida.existeFichero()) {
+				System.out.println("[...] CompresiÛn solicitada: " + _compresion.toString());
+				if (_compresion == Fichero.Extensiones.zip && _ficheroSalida.existeFichero()) {
 					System.out.println("[...] Comprimiendo fichero...");
-					_ficheroSalida.comprimir();
+					_ficheroSalida.comprimir(_compresion);
 					System.out.println("[...] Borrando fichero origen...");
 					_ficheroSalida.borrarFichero();
 				}
 				System.out.println("[...] Borrando fichero testigo Ejecutando...");
 				_ficheroEjecutando.borrarFichero();
 			}else{
-				System.out.println("[...] Ya est√° ejecutando o el fichero requisito no existe o el fichero ok ya existe.");
+				System.out.println("[...] Ya est· ejecutando o el fichero requisito no existe o el fichero ok ya existe.");
 				res=null;
 			}					
 		}
@@ -85,7 +86,7 @@ public class ExportadorQuery {
 	}
 
 	/**
-	 * Lee los par√°metros del fichero de configuraci√≥n.
+	 * Lee los par·metros del fichero de configuraciÛn.
 	 * Linea "DRIVER=". Driver de base de datos. Por ejemplo: oracle.jdbc.driver.OracleDriver
 	 * Linea "CONEXION=". Url de conexion a la base de datos. Por ejemplo: jdbc:oracle:thin:@localhost:1521:mkyong
 	 * Linea "USUARIO=". Usuario de conexion a la base de datos.
@@ -93,7 +94,7 @@ public class ExportadorQuery {
 	 * Linea "FORMATO_SALIDA=". Extension del fichero de salida de la consulta. En funcion del tipo de extension de salida hace una cosa u otra
 	 *          Si es .ok genera el fichero solo el numero de registros de la consulta es mayor a 0 (devuelve datos)
 	 * Linea "QUERY=". Query a ejecutar.
-	 * Linea "MULTI_QUERY=". Si en lugar de una query, se quiere ejecutar m√°s de una para guardarlas en una excel en distintas hojas, utilizar
+	 * Linea "MULTI_QUERY=". Si en lugar de una query, se quiere ejecutar m·s de una para guardarlas en una excel en distintas hojas, utilizar
 	 * 			este parametro en lugar de QUERY. Separar las querys por ";". Es necesario informar el parametro MULTI_SALIDA para dar nombre a cada hoja.
 	 * Linea "MULTI_SALIDA=". Separar por ";" cada una de las hojas que corresponde con cada una de las querys del parametro MULTI_QUERY.
 	 * Linea "COMPRESION=". Si es ZIP, el archivo destino se comprime. En otro caso se deja sin comprimir
@@ -118,24 +119,24 @@ public class ExportadorQuery {
 			String extension = config.obtenerValorConfiguracion(Configuracion.FORMATO_SALIDA);
 			try {
 				if (extension==null)
-					_extensionSalida = EXTENSION.none;
-				else if (extension.equals(EXTENSION.csv.toString()))
-					_extensionSalida = EXTENSION.csv;
-				else if (extension.equals(EXTENSION.ok.toString()))
-					_extensionSalida = EXTENSION.ok;
-				else if (extension.equals(EXTENSION.xlsx.toString()))
-					_extensionSalida = EXTENSION.xlsx;
+					_extensionSalida = Fichero.Extensiones.none;
+				else if (extension.equals(Fichero.Extensiones.csv.toString()))
+					_extensionSalida = Fichero.Extensiones.csv;
+				else if (extension.equals(Fichero.Extensiones.ok.toString()))
+					_extensionSalida = Fichero.Extensiones.ok;
+				else if (extension.equals(Fichero.Extensiones.xlsx.toString()))
+					_extensionSalida = Fichero.Extensiones.xlsx;
 				else
-					_extensionSalida = EXTENSION.none;
+					_extensionSalida = Fichero.Extensiones.none;
 			} catch (Exception e) {
-				_extensionSalida = EXTENSION.none;
-				throw new Exception("Error en la linea de extension inv√°lida: "+extension);
+				_extensionSalida = Fichero.Extensiones.none;
+				throw new Exception("Error en la linea de extension inv·lida: "+extension);
 			}
 			//NOMBRE DE FICHEROS
-			_fileOutput=_fileConfig.replaceAll("."+EXTENSION.config.toString(), "."+_extensionSalida.toString());
-			_fileError=_fileConfig.replaceAll("."+EXTENSION.config.toString(), "."+EXTENSION.error.toString());
-			_fileEjecutando=_fileConfig.replaceAll("."+EXTENSION.config.toString(), "."+EXTENSION.ejecutando.toString());
-			_fileOK=_fileConfig.replaceAll("."+EXTENSION.config.toString(), "."+EXTENSION.ok.toString());
+			_fileOutput=_fileConfig.replaceAll("."+Fichero.Extensiones.config.toString(), "."+_extensionSalida.toString());
+			_fileError=_fileConfig.replaceAll("."+Fichero.Extensiones.config.toString(), "."+Fichero.Extensiones.error.toString());
+			_fileEjecutando=_fileConfig.replaceAll("."+Fichero.Extensiones.config.toString(), "."+Fichero.Extensiones.ejecutando.toString());
+			_fileOK=_fileConfig.replaceAll("."+Fichero.Extensiones.config.toString(), "."+Fichero.Extensiones.ok.toString());
 			//QUERY
 			String query = config.obtenerValorConfiguracion(Configuracion.QUERY);
 			String querys = config.obtenerValorConfiguracion(Configuracion.MULTI_QUERY);
@@ -157,11 +158,11 @@ public class ExportadorQuery {
 			//COMPRESION
 			String compresion=config.obtenerValorConfiguracion(Configuracion.COMPRESION);
 			if (compresion==null)
-				_compresion = EXTENSION.none;
-			else if (compresion.equals(EXTENSION.zip.toString()))
-				_compresion = EXTENSION.zip;
+				_compresion = Fichero.Extensiones.none;
+			else if (compresion.equals(Fichero.Extensiones.zip.toString()))
+				_compresion = Fichero.Extensiones.zip;
 			else
-				_compresion = EXTENSION.none;
+				_compresion = Fichero.Extensiones.none;
 			//FICHERO CONDICION
 			_fileRequisito= config.obtenerValorConfiguracion(Configuracion.FICHERO_CONDICION);
 			//De no haber fichero de requisito porque no sea necesario, ponemos a si mismo

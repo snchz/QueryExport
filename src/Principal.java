@@ -7,7 +7,7 @@ public class Principal {
 
 	/**
 	 * 
-	 * @param args Se le pasa el archivo de configuraci√≥n por par√°metro
+	 * @param args Se le pasa el archivo de configuraciÛn por par·metro
 	 */
 	public static void main(String[] args) {
 		//Log inicio
@@ -15,10 +15,9 @@ public class Principal {
 		System.out.println("HORA INICIO "+(new SimpleDateFormat("yyyy/MM/dd HH:mm:ss")).format(horaInicio));
 		
 		String resultado="";
-		//args=new String[1];args[0]="TestDMContable.config";
 		
 		if (args.length==0){
-			//TODO Recorrer carpeta de CONFIGURACION
+			//TODO Recorrer carpeta de CONFIGURACION o pedir introducir valores por consola
 		}else{
 			ExportadorQuery eq=new ExportadorQuery(args[0]);
 			try {
