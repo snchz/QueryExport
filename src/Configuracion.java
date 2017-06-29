@@ -64,11 +64,11 @@ public class Configuracion {
 	public static void main(String[] args) {
 		Configuracion c=new Configuracion("Ejemplo.config");
 		/*c.agregarValorConfiguracion("DRIVER", "com.ibm.db2.jcc.DB2Driver");
-		c.agregarValorConfiguracion("CONEXION", "jdbc:db2://UEGBABKS.GEOBAN.GS.CORP:60010/UEGBABKS");
-		c.agregarValorConfiguracion("USUARIO", "x340382");
-		c.agregarValorConfiguracion("PASSWORD", "Csacsa10");
+		c.agregarValorConfiguracion("CONEXION", "jdbc:db2://servidor:60010/database");
+		c.agregarValorConfiguracion("USUARIO", "user");
+		c.agregarValorConfiguracion("PASSWORD", "pass");
 		c.agregarValorConfiguracion("FORMATO_SALIDA", "xlsx");
-		c.agregarValorConfiguracion("QUERY", "SELECT N8996_IDEMPR, N8996_IDDOCUMENT, N8996_DOCTYPE, N8996_FEALTAINC, N8996_INDREPLI,N8996_DOCSTATUS, N8996_FECALTALOC FROM TTGGSOP.DR_DISPUTA_DOCU WHERE N8996_FEALTAINC >= char(CURRENT_DATE - 1 DAY)||' 00:00:00' and N8996_FEALTAINC < char(CURRENT_DATE - 1 DAY)||' 23:59:00'");
+		c.agregarValorConfiguracion("QUERY", "SELECT 1");
 		c.agregarValorConfiguracion("FICHERO_CONDICION", "LOG.txt");
 		c.guardarConfiguracionAFichero();*/
 		System.out.println(c.obtenerValorConfiguracion("CACA"));
