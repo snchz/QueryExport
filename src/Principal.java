@@ -3,11 +3,13 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
+import ficheros.FicheroTexto;
+
 public class Principal {
 
 	/**
 	 * 
-	 * @param args Se le pasa el archivo de configuración por parámetro
+	 * @param args Se le pasa el archivo de configuraciï¿½n por parï¿½metro
 	 */
 	public static void main(String[] args) {
 		//Log inicio
@@ -21,7 +23,7 @@ public class Principal {
 		}else{
 			ExportadorQuery eq=new ExportadorQuery(args[0]);
 			try {
-				resultado=eq.Ejecutar();
+				resultado=eq.ejecutar();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -36,8 +38,9 @@ public class Principal {
 		
 		if (resultado != null){
 			String lineaLog=(new SimpleDateFormat("yyyy/MM/dd HH:mm:ss")).format(horaInicio)+"\t"+(new SimpleDateFormat("HH:mm:ss")).format(horaFin)+"\t("+String.format("%04d", minutos)+" min)\t"+String.format("%1$-50s",args[0])+"\t"+resultado+"\n";
-			Fichero log=new Fichero("LOG.txt");
-			log.escribirLineaAlFinal(lineaLog);
+			FicheroTexto log=new FicheroTexto("LOG.txt",false);
+			log.agregarLineaAlFinal(lineaLog);
+			log.cerrar();
 		}
 		
 	}
