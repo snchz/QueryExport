@@ -12,9 +12,11 @@ public class FicheroTexto implements Fichero{
 	public static enum Extension {TXT,OK,ERROR,EJECUTANDO,CONFIG}
 	private String _filename;
 	private BufferedWriter _f; 
+	private boolean _crear=false;
 
 	public FicheroTexto(String fichero, boolean crear) {
 		_filename=fichero;
+		_crear=crear;
 		if (crear){
 			this.crear();
 			this.cerrar();
@@ -38,6 +40,20 @@ public class FicheroTexto implements Fichero{
 		try {
 			_f = new BufferedWriter(new OutputStreamWriter(
 			          new FileOutputStream(this._filename), "utf-8"));
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+			return false;
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			return false;
+		}
+		return false;
+	}
+
+	public boolean abrir() {
+		try {
+			_f = new BufferedWriter(new OutputStreamWriter(
+			          new FileOutputStream(this._filename,true), "utf-8"));
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 			return false;
@@ -89,7 +105,10 @@ public class FicheroTexto implements Fichero{
 
 	public void agregarLineaAlFinal(String linea) {
 		if (this._f==null)
-			this.crear();
+			if (_crear)
+				this.crear();
+			else
+				this.abrir();
 			try {
 				this._f.append(linea);
 			} catch (IOException e) {

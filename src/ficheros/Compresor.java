@@ -28,6 +28,9 @@ public class Compresor {
 	private boolean comprimirZip(String fichero){
 		boolean res=false;
 		try {
+			File temp=new File(fichero);
+			fichero=temp.getName();
+			
 			//fichero de entrada
 			FileInputStream in = new FileInputStream(fichero);
 

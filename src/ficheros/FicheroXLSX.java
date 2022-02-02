@@ -22,7 +22,7 @@ public class FicheroXLSX implements Fichero{
 		_filename=fichero;
 		if (crear){
 			this.crear();
-			this.cerrar();
+			//this.cerrar();
 		}
 	}
 
@@ -71,7 +71,8 @@ public class FicheroXLSX implements Fichero{
 	public boolean cerrar() {
 		if (_f!=null){
 			try {
-				//_f.write(_fos); TODO: Escribo o no?
+				_f.write(_fos);// TODO: Escribo o no?
+				_fos.flush();
 				_fos.close();
 				_f.close();
 				this._f=null;

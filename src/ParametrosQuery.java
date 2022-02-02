@@ -1,3 +1,4 @@
+
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.StringTokenizer;
@@ -131,26 +132,40 @@ public class ParametrosQuery {
 			_fileError=_fileConfig.replaceAll("."+extensionConfig, "."+FicheroTexto.Extension.ERROR.toString().toLowerCase());
 			_fileEjecutando=_fileConfig.replaceAll("."+extensionConfig, "."+FicheroTexto.Extension.EJECUTANDO.toString().toLowerCase());
 			_fileOK=_fileConfig.replaceAll("."+extensionConfig, "."+FicheroTexto.Extension.OK.toString().toLowerCase());
+			
+			//PARAMETROS - Sustituimos los parametros de las querys
+			String parametros=config.obtenerValorConfiguracion(Configuracion.PARAMETROS);
+			StringTokenizer parametros_list=null;
+			if (parametros!=null)
+				parametros_list=new StringTokenizer(parametros, ";");
 			//QUERY
-			String query = config.obtenerValorConfiguracion(Configuracion.QUERY);
-			String querys = config.obtenerValorConfiguracion(Configuracion.MULTI_QUERY);
-			String hojas = config.obtenerValorConfiguracion(Configuracion.MULTI_SALIDA);
+			//QUERY1, QUERY2,....
 			_querys=new LinkedHashMap<String, String>();
-			if (query!=null){
-				_querys.put("Hoja1", query);
-			}else if (querys!=null){
-				StringTokenizer querys_list=new StringTokenizer(querys, ";");
-				StringTokenizer hojas_list=new StringTokenizer(hojas, ";");
-				if (hojas_list.countTokens()!=querys_list.countTokens())
-					throw new Exception("No cuadra el numero de token de las querys con el numero de tokens de las salidas. Revisa los parametros "+Configuracion.MULTI_QUERY+" y "+Configuracion.MULTI_SALIDA);
-				while (hojas_list.hasMoreTokens()){
-					_querys.put(hojas_list.nextToken(), querys_list.nextToken());
+			for (int i=1;i<=Configuracion.MAX_QUERIES;i++){
+				String queryNum=Configuracion.QUERY+Integer.toString(i);
+				String salidaNum=Configuracion.SALIDA+Integer.toString(i);
+				if (config.obtenerValorConfiguracion(queryNum)==null)
+					break; //si no existe la siguiente query, salgo del bucle
+				String query=config.obtenerValorConfiguracion(queryNum);
+				String hoja=config.obtenerValorConfiguracion(salidaNum);
+				
+				//Reemplazo los parametros
+				while (parametros_list.hasMoreTokens()){
+					StringTokenizer par_val=new StringTokenizer(parametros_list.nextToken(), "=");
+					String par=par_val.nextToken();
+					String val=par_val.nextToken();
+					if (query!=null)
+						query=query.replaceAll(par, val);
 				}
-			}else{
-				throw new Exception("No hay querys para lanzar. Haz uso de los parametros "+Configuracion.QUERY+" o "+Configuracion.MULTI_QUERY);
+				//reseteo los parametros para la siguiente query
+				parametros_list=new StringTokenizer(parametros, ";");
+				
+				_querys.put(hoja, query);
 			}
 			//COMPRESION
-			_compresion=config.obtenerValorConfiguracion(Configuracion.COMPRESION).toLowerCase();
+			_compresion=config.obtenerValorConfiguracion(Configuracion.COMPRESION);
+			if (_compresion!=null)
+				_compresion=_compresion.toLowerCase();
 			//FICHERO CONDICION
 			_fileRequisito= config.obtenerValorConfiguracion(Configuracion.FICHERO_CONDICION);
 			//De no haber fichero de requisito porque no sea necesario, ponemos a si mismo

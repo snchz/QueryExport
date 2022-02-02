@@ -1,3 +1,4 @@
+
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -71,7 +72,7 @@ public class ExportadorQuery {
 				if (this._pq.getExtensionSalida().equals(FicheroCSV.Extension.CSV.toString().toLowerCase()))
 					_ficheroSalida=new FicheroCSV(this._pq.getFileOutput(),false);
 				else if (this._pq.getExtensionSalida().equals(FicheroXLSX.Extension.XLSX.toString().toLowerCase()))
-					_ficheroSalida=new FicheroXLSX(this._pq.getFileOutput(),false);
+					_ficheroSalida=new FicheroXLSX(this._pq.getFileOutput(),true);
 				
 				
 				Combo combo_res=this.obtenerResulsetQuery();
@@ -89,7 +90,7 @@ public class ExportadorQuery {
 				}
 				
 				System.out.println("[...] Compresion solicitada: " + this._pq.getCompresion());
-				if (this._pq.getCompresion().equals(FicheroCompresor.ExtCompresion.ZIP.toString().toLowerCase()) && _ficheroSalida.existe()) {
+				if (this._pq.getCompresion()!=null && this._pq.getCompresion().equals(FicheroCompresor.ExtCompresion.ZIP.toString().toLowerCase()) && _ficheroSalida.existe()) {
 					System.out.println("[...] Comprimiendo fichero...");
 					Compresor c=new Compresor();
 					c.comprimir(Compresor.ExtCompresion.ZIP,this._ficheroSalida.obtenerFileName());
@@ -119,19 +120,20 @@ public class ExportadorQuery {
 		if (_ficheroSalida==null)
 			return res;
 		try {
-			System.out.println("[Paso 1 de 4] Buscando driver " + this._pq.getDriver() + "...");
+			System.out.println("[...........] Preparando fichero " + _ficheroSalida.obtenerFileName());
+			System.out.println("[Paso 1 de 5] Buscando driver " + this._pq.getDriver() + "...");
 			Class.forName(this._pq.getDriver());
 			System.out.println("[...........] Driver " + this._pq.getDriver() + " encontrado.");
-			System.out.println("[Paso 2 de 4] Realizando conexion " + this._pq.getUrl() + "...");
+			System.out.println("[Paso 2 de 5] Realizando conexion " + this._pq.getUrl() + "...");
 			conn = DriverManager.getConnection(this._pq.getUrl(), this._pq.getUser(), this._pq.getPass());
 			System.out.println("[...........] Conexion " + this._pq.getUrl() + " realizada.");
 			stmt = conn.createStatement();
 			
 			for (String hoja:this._pq.getQuerys().keySet()){
-				System.out.println("[Paso 3 de 4] Lanzando query... Hoja: "+hoja);
+				System.out.println("[Paso 3 de 5] Lanzando query... Hoja: "+hoja);
 				rs = stmt.executeQuery(this._pq.getQuerys().get(hoja));
 				System.out.println("[...........] Query obtenida.");
-				System.out.println("[Paso 3 de 4] Guardando a fichero...");
+				System.out.println("[Paso 4 de 5] Guardando a fichero...");
 				
 				ResultSetMetaData metaData = rs.getMetaData();
 				Integer columnCount = metaData.getColumnCount();

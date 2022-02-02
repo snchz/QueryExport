@@ -1,3 +1,4 @@
+
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -13,9 +14,10 @@ public class Configuracion {
 	private String _fichero;
 	public static String FICHERO_CONDICION="FICHERO_CONDICION", 
 			USUARIO="USUARIO", CONEXION="CONEXION", PASSWORD="PASSWORD", DRIVER="DRIVER", 
-			QUERY="QUERY", 
+			QUERY="QUERY", SALIDA="SALIDA",
 			MULTI_QUERY="MULTI_QUERY", MULTI_SALIDA="MULTI_SALIDA",
-			FORMATO_SALIDA="FORMATO_SALIDA", COMPRESION="COMPRESION";
+			FORMATO_SALIDA="FORMATO_SALIDA", COMPRESION="COMPRESION", PERIOCIDAD="PERIOCIDAD", PARAMETROS="PARAMETROS";
+	public static int MAX_QUERIES=10;
 	
 	public Configuracion(String fichero){
 		_prop = new Properties();
@@ -41,7 +43,7 @@ public class Configuracion {
 				_input = new FileInputStream(_fichero);
 				_prop.load(_input);
 			} catch (FileNotFoundException e) {
-				System.err.println("Error al abrir configuracion. EL archivo no se encuentra.\n\tDetalles: "+e.getMessage());
+				System.err.println("Error al abrir configuracion. El archivo "+nombre+" no se encuentra.\n\tDetalles: "+e.getMessage());
 			} catch (IOException e) {
 				System.err.println("Error al abrir configuracion. Archivo incorrecto.\n\tDetalles: "+e.getMessage());
 			}
