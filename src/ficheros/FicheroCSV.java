@@ -34,7 +34,8 @@ public class FicheroCSV implements Fichero{
 	@Override
 	public boolean crear() {
 		try {
-			_f = new CSVWriter(new FileWriter(this._filename), ';', CSVWriter.NO_QUOTE_CHARACTER);
+			_f = new CSVWriter(new FileWriter(this._filename), ';', CSVWriter.NO_QUOTE_CHARACTER,  CSVWriter.DEFAULT_ESCAPE_CHARACTER,
+                    CSVWriter.DEFAULT_LINE_END);
 		} catch (IOException e) {
 			return false;
 		}
